@@ -31,11 +31,37 @@ function within_clint forall 'n, 0 < 'n <= max_mem_access . (Physaddr(addr) : ph
   & (addr_int + sizeof('n)) <= (clint_base_int + clint_size_int)
 }
 
+
+function intersect_clint forall 'n, 0 < 'n <= max_mem_access . (Physaddr(addr) : physaddr, width : int('n)) -> bool = {
+  // To avoid overflow issues when physical memory extends to the end
+  // of the addressable range, we need to perform address bound checks
+  // on unsigned unbounded integers.
+  let addr_int       = unsigned(addr);
+  let clint_base_int = unsigned(plat_clint_base);
+  let clint_size_int = unsigned(plat_clint_size);
+    clint_base_int <= (addr_int+width)  
+  & (addr_int  <= (clint_base_int + clint_size_int))
+}
+
+
+
 function within_htif_writable forall 'n, 0 < 'n <= max_mem_access . (Physaddr(addr) : physaddr, width : int('n)) -> bool =
   match htif_tohost_base {
     None() => false,
-    Some(base) => (addr <_u base + htif_tohost_size) & (addr + width >_u base)
+//    Some(base) => (addr <_u base + htif_tohost_size) & (addr + width >_u base)
+    Some(base) => (addr+width <=_u base + htif_tohost_size) & (addr  >=_u base)
   }
+
+
+
+
+function intersect_htif_writable forall 'n, 0 < 'n <= max_mem_access . (Physaddr(addr) : physaddr, width : int('n)) -> bool =
+  match htif_tohost_base {
+    None() => false,
+    Some(base) => (addr <_u base + htif_tohost_size) & (addr + width >_u base)
+    //Some(base) => (addr+width <=_u base + htif_tohost_size) & (addr  >=_u base)
+  }
+
 
 function within_htif_readable forall 'n, 0 < 'n <= max_mem_access . (addr : physaddr, width : int('n)) -> bool =
   within_htif_writable(addr, width)
@@ -340,10 +366,10 @@ function within_mmio_readable forall 'n, 0 < 'n <= max_mem_access . (addr : phys
   then false
   else within_clint(addr, width) | (within_htif_readable(addr, width) & 1 <= 'n)
 
-function within_mmio_writable forall 'n, 0 < 'n <= max_mem_access . (addr : physaddr, width : int('n)) -> bool =
+function intersect_mmio_writable forall 'n, 0 < 'n <= max_mem_access . (addr : physaddr, width : int('n)) -> bool =
   if get_config_rvfi()
   then false
-  else within_clint(addr, width) | (within_htif_writable(addr, width) & 'n <= 8)
+  else intersect_clint(addr, width) | (intersect_htif_writable(addr, width) & 'n <= 8)
 
 function mmio_read forall 'n, 0 < 'n <= max_mem_access . (t : MemoryAccessType(ext_access_type), paddr : physaddr, width : int('n)) -> MemoryOpResult(bits(8 * 'n)) =
   if   within_clint(paddr, width)

@@ -51,3 +51,23 @@ function range_subset_precise(a_begin : bits(8), a_size : bits(8), b_begin : bit
 
   (is_subset & index_in_a ==> index_in_b) & ((index_in_a & not(index_in_b)) ==> not(is_subset))
 }
+
+function within forall 'n, 0 <= 'n <= 64 . (
+  a_begin : bits('n),
+  a_size  : bits('n),
+  b_begin : bits('n),
+  b_size  : bits('n)
+) -> bool = {
+  range_subset(a_begin, a_size, b_begin, b_size)
+}
+
+function intersects forall 'n, 0 <= 'n <= 64 . (
+  a_begin : bits('n),
+  a_size  : bits('n),
+  b_begin : bits('n),
+  b_size  : bits('n)
+) -> bool = {
+  let a_end = a_begin + a_size;
+  let b_end = b_begin + b_size;
+  (a_begin <_u b_end) & (b_begin <_u a_end)
+}

@@ -254,7 +254,7 @@ function checked_mem_write forall 'n, 0 < 'n <= max_mem_access . (
   match phys_access_check(typ, priv, paddr, width, con) {
     Some(e) => Err(e),
     None() => {
-      if   within_mmio_writable(paddr, width)
+      if   intersect_mmio_writable(paddr, width)
       then mmio_write(paddr, width, data)
       else {
         let wk = write_kind_of_flags(aq, rl, con);
